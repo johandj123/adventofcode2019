@@ -1,4 +1,5 @@
 import intcode.Computer;
+import intcode.NullIO;
 import intcode.Program;
 
 import java.io.IOException;
@@ -19,7 +20,7 @@ public class Day2 {
     }
 
     private static long runProgram(Program program, int noun, int verb) {
-        Computer computer = new Computer(program);
+        Computer computer = new Computer(program, new NullIO());
         computer.setMemory(1, noun);
         computer.setMemory(2, verb);
         computer.runProgram();

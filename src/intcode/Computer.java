@@ -11,9 +11,10 @@ public class Computer {
     private Map<Long, Long> memory = new HashMap<>();
     private long pc = 0L;
     private long rel = 0L;
-    private Scanner scanner = new Scanner(System.in);
+    private IO io;
 
-    public Computer(Program program) {
+    public Computer(Program program, IO io) {
+        this.io = io;
         for (int i = 0; i < program.getValues().size(); i++) {
             setMemory(i, program.getValues().get(i));
         }
@@ -38,10 +39,10 @@ public class Computer {
                 parameters[2].put(parameters[0].get() * parameters[1].get());
             } else if (opcode == 3) {
                 getParameters(parameters, 1, instruction);
-                parameters[0].put(scanner.nextInt());
+                parameters[0].put(io.read());
             } else if (opcode == 4) {
                 getParameters(parameters, 1, instruction);
-                System.out.println(parameters[0].get());
+                io.write(parameters[0].get());
             } else if (opcode == 5) {
                 getParameters(parameters, 2, instruction);
                 if (parameters[0].get() != 0) {
