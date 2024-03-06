@@ -3,9 +3,7 @@ import lib.InputUtil;
 import lib.MathUtil;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.IntStream;
 
 public class Day10 {
@@ -19,11 +17,13 @@ public class Day10 {
                 }
             }
         }
-        first(asteroids);
+        Position station = first(asteroids);
+        second(asteroids, station);
     }
 
-    private static void first(Set<Position> asteroids) {
+    private static Position first(Set<Position> asteroids) {
         int maxCount = Integer.MIN_VALUE;
+        Position maxPosition = null;
         for (Position a : asteroids) {
             int count = 0;
             for (Position b : asteroids) {
@@ -64,9 +64,42 @@ public class Day10 {
                     }
                 }
             }
-            maxCount = Math.max(maxCount, count);
+            if (count > maxCount) {
+                maxCount = count;
+                maxPosition = a;
+            }
         }
         System.out.println(maxCount);
+        return maxPosition;
+    }
+
+    private static void second(Set<Position> asteroids, Position station) {
+        asteroids.remove(station);
+        Map<Angle, List<Position>> map = new HashMap<>();
+        for (Position asteroid : asteroids) {
+            int dx = asteroid.x - station.x;
+            int dy = asteroid.y - station.y;
+            Angle angle = new Angle(dx, dy);
+            map.computeIfAbsent(angle, key -> new ArrayList<>()).add(asteroid);
+        }
+        SortedMap<Angle, Deque<Position>> sortedMap = new TreeMap<>();
+        for (var entry : map.entrySet()) {
+            Angle angle = entry.getKey();
+            List<Position> positions = entry.getValue();
+            positions.sort(Comparator.comparing(position -> position.distanceSquared(station)));
+            sortedMap.put(angle, new ArrayDeque<>(positions));
+        }
+        List<Position> vaporizeList = new ArrayList<>();
+        while (vaporizeList.size() < asteroids.size()) {
+            for (var entry : sortedMap.entrySet()) {
+                Deque<Position> deque = entry.getValue();
+                if (!deque.isEmpty()) {
+                    vaporizeList.add(deque.removeFirst());
+                }
+            }
+        }
+        Position asteroid200 = vaporizeList.get(200 - 1);
+        System.out.println(asteroid200.x * 100 + asteroid200.y);
     }
 
     static class Position {
@@ -76,6 +109,12 @@ public class Day10 {
         public Position(int x, int y) {
             this.x = x;
             this.y = y;
+        }
+
+        public long distanceSquared(Position o) {
+            long dx = x - o.x;
+            long dy = y - o.y;
+            return dx * dx + dy * dy;
         }
 
         @Override
@@ -89,6 +128,59 @@ public class Day10 {
         @Override
         public int hashCode() {
             return Objects.hash(x, y);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("(%d,%d)", x, y);
+        }
+    }
+
+    static class Angle implements Comparable<Angle> {
+        int quadrant;
+        int dx;
+        int dy;
+
+        Angle(int deltaX,int deltaY) {
+            quadrant = 0;
+            dx = deltaX;
+            dy = deltaY;
+            while (!(dx >= 0 && dy < 0)) {
+                int ndx = dy;
+                int ndy = -dx;
+                dx = ndx;
+                dy = ndy;
+                quadrant++;
+            }
+            int gcd = (int) MathUtil.gcd(dx, dy);
+            dx = Math.abs(dx / gcd);
+            dy = Math.abs(dy / gcd);
+        }
+
+        @Override
+        public int compareTo(Angle o) {
+            if (quadrant < o.quadrant) {
+                return -1;
+            }
+            if (quadrant > o.quadrant) {
+                return 1;
+            }
+            long a = ((long) dx) * ((long) o.dy);
+            long b = ((long) dy) * ((long) o.dx);
+            return Long.compare(a, b);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Angle angle = (Angle) o;
+            return quadrant == angle.quadrant && dx == angle.dx && dy == angle.dy;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(quadrant, dx, dy);
         }
     }
 }
