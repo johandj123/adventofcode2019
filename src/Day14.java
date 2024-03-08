@@ -14,26 +14,47 @@ public class Day14 {
                 .map(Reaction::new)
                 .collect(Collectors.toMap(reaction -> reaction.out.chemical, reaction -> reaction));
         first(reactions);
+        second(reactions);
     }
 
     private static void first(Map<String, Reaction> reactions) {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("FUEL", 1);
+        long ore = determineOreCountForFuelCount(reactions, 1L);
+        System.out.println(ore);
+    }
+
+    private static void second(Map<String, Reaction> reactions) {
+        long l = 1L;
+        long h = 100000000L;
+        while (l < h - 1) {
+            long m = (l + h) / 2;
+            if (determineOreCountForFuelCount(reactions, m) < 1000000000000L) {
+                l = m;
+            } else {
+                h = m;
+            }
+        }
+        System.out.println(l);
+    }
+
+    private static long determineOreCountForFuelCount(Map<String, Reaction> reactions, long fuel) {
+        Map<String, Long> map = new HashMap<>();
+        map.put("FUEL", fuel);
         while (!mapDone(map)) {
             map = performInverseReactions(map, reactions);
         }
-        System.out.println(map.get("ORE"));
+        long ore = map.get("ORE");
+        return ore;
     }
 
-    private static Map<String, Integer> performInverseReactions(Map<String, Integer> map, Map<String, Reaction> reactions) {
-        Map<String, Integer> result = new HashMap<>(map);
+    private static Map<String, Long> performInverseReactions(Map<String, Long> map, Map<String, Reaction> reactions) {
+        Map<String, Long> result = new HashMap<>(map);
         for (var entry : map.entrySet()) {
             Reaction reaction = reactions.get(entry.getKey());
             if (reaction == null) {
                 continue;
             }
             if (entry.getValue() > 0) {
-                int reactionCount = (entry.getValue() + reaction.out.count - 1) / reaction.out.count;
+                long reactionCount = (entry.getValue() + reaction.out.count - 1) / reaction.out.count;
                 modifyMap(result, entry.getKey(), -reactionCount * reaction.out.count);
                 for (var cwq : reaction.in) {
                     modifyMap(result, cwq.chemical, reactionCount * cwq.count);
@@ -43,8 +64,8 @@ public class Day14 {
         return result;
     }
 
-    private static void modifyMap(Map<String, Integer> map, String chemical, int countModification) {
-        int currentCount = map.getOrDefault(chemical, 0);
+    private static void modifyMap(Map<String, Long> map, String chemical, long countModification) {
+        long currentCount = map.getOrDefault(chemical, 0L);
         currentCount += countModification;
         if (currentCount == 0) {
             map.remove(chemical);
@@ -53,7 +74,7 @@ public class Day14 {
         }
     }
 
-    private static boolean mapDone(Map<String, Integer> map) {
+    private static boolean mapDone(Map<String, Long> map) {
         return map.entrySet().stream().allMatch(entry -> "ORE".equals(entry.getKey()) || entry.getValue() <= 0);
     }
 
@@ -75,12 +96,12 @@ public class Day14 {
     }
 
     static class ChecimalWithQuantity {
-        int count;
+        long count;
         String chemical;
 
         ChecimalWithQuantity(String s) {
             String[] sp = s.split(" ");
-            count = Integer.parseInt(sp[0]);
+            count = Long.parseLong(sp[0]);
             chemical = sp[1];
         }
 
