@@ -3,10 +3,7 @@ import intcode.IO;
 import intcode.Program;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 
 public class Day23 {
     public static void main(String[] args) throws IOException {
@@ -15,15 +12,13 @@ public class Day23 {
     }
 
     private static void first(Program program) {
-        List<Deque<Packet>> deques = new ArrayList<>();
-        for (int i = 0; i < 50; i++) {
-            deques.add(new ArrayDeque<>());
-        }
+        Shared shared = new Shared();
         List<ComputerThread> threads = new ArrayList<>();
         for (int i = 0; i < 50; i++) {
-            threads.add(new ComputerThread(program, new NetworkIO(i, deques)));
+            threads.add(new ComputerThread(program, new NetworkIO(i, shared)));
         }
         threads.forEach(Thread::start);
+        new NATThread(shared).start();
     }
 
     static class Packet {
@@ -36,34 +31,54 @@ public class Day23 {
         }
     }
 
+    static class Shared {
+        final List<Deque<Packet>> deques;
+        Long last255x;
+        Long last255y;
+        Long sent0y;
+
+        public Shared() {
+            deques = new ArrayList<>();
+            for (int i = 0; i < 50; i++) {
+                deques.add(new ArrayDeque<>());
+            }
+        }
+    }
+
     static class NetworkIO implements IO {
         final int networkAddress;
-        Long storedValue;
-        final List<Deque<Packet>> deques;
+        boolean receivedNetworkAddress = false;
+        boolean receivedX;
+        final Shared shared;
         final long[] outValues = new long[3];
         int outCurrent = 0;
 
-        public NetworkIO(int networkAddress, List<Deque<Packet>> deques) {
+        public NetworkIO(int networkAddress, Shared shared) {
             this.networkAddress = networkAddress;
-            this.deques = deques;
-            storedValue = (long) networkAddress;
+            this.shared = shared;
         }
 
         @Override
         public long read() {
-            if (storedValue != null) {
-                long result = storedValue;
-                storedValue = null;
-                return result;
+            if (!receivedNetworkAddress) {
+                receivedNetworkAddress = true;
+                return networkAddress;
             }
-            Deque<Packet> deque = deques.get(networkAddress);
-            synchronized (deque) {
-                Packet packet = deque.pollFirst();
-                if (packet == null) {
-                    return -1;
+            Deque<Packet> deque = shared.deques.get(networkAddress);
+            synchronized (shared) {
+                if (!receivedX) {
+                    Packet packet = deque.peekFirst();
+                    if (packet == null) {
+                        return -1;
+                    } else {
+                        receivedX = true;
+                        return packet.x;
+                    }
                 } else {
-                    storedValue = packet.y;
-                    return packet.x;
+                    Packet packet = deque.removeFirst();
+                    shared.notify();
+                    receivedX = false;
+                    return packet.y;
                 }
             }
         }
@@ -74,9 +89,11 @@ public class Day23 {
             if (outCurrent == 3) {
                 outCurrent = 0;
                 if (outValues[0] == 255) {
+                    shared.last255x = outValues[1];
+                    shared.last255y = outValues[2];
                     System.out.println(outValues[2]);
                 } else {
-                    deques.get((int) outValues[0]).offerLast(new Packet(outValues[1], outValues[2]));
+                    shared.deques.get((int) outValues[0]).offerLast(new Packet(outValues[1], outValues[2]));
                 }
             }
         }
@@ -84,7 +101,7 @@ public class Day23 {
 
     static class ComputerThread extends Thread {
         private final Program program;
-        private NetworkIO io;
+        private final NetworkIO io;
 
         public ComputerThread(Program program, NetworkIO io) {
             this.program = program;
@@ -95,6 +112,36 @@ public class Day23 {
         public void run() {
             Computer computer = new Computer(program, io);
             computer.runProgram();
+        }
+    }
+
+    static class NATThread extends Thread {
+        private final Shared shared;
+
+        public NATThread(Shared shared) {
+            this.shared = shared;
+        }
+
+        @Override
+        public void run() {
+            synchronized (shared) {
+                while (true) {
+                    try {
+                        shared.wait();
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    if (shared.last255x != null && shared.last255y != null && shared.deques.stream().allMatch(Collection::isEmpty)) {
+                        shared.deques.get(0).offerLast(new Packet(shared.last255x, shared.last255y));
+                        if (Objects.equals(shared.sent0y, shared.last255y)) {
+                            System.out.println("Repeated delivery of " + shared.last255y + " to network address 0");
+                            System.exit(0);
+                        }
+                        shared.sent0y = shared.last255y;
+                    }
+                }
+            }
         }
     }
 }
