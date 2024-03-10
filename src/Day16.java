@@ -10,14 +10,42 @@ public class Day16 {
         String input = InputUtil.readAsString("input16.txt");
         List<Integer> values = input.chars().mapToObj(c -> c - '0').collect(Collectors.toList());
         first(values);
+        second(values);
     }
 
     private static void first(List<Integer> values) {
         for (int i = 0; i < 100; i++) {
             values = fft(values);
         }
-        String result = asString(values).substring(0, 8);
+        String result = asString(values.subList(0, 8));
         System.out.println(result);
+    }
+
+    private static void second(List<Integer> initial) {
+        List<Integer> values = new ArrayList<>();
+        for (int i = 0; i < 10000; i++) {
+            values.addAll(initial);
+        }
+        int offset = Integer.parseInt(asString(values.subList(0, 7)));
+        values = values.subList(offset, values.size());
+        for (int i = 0; i < 100; i++) {
+            fasterfft(values);
+        }
+        String result = asString(values.subList(0, 8));
+        System.out.println(result);
+    }
+
+    private static void fasterfft(List<Integer> values) {
+        List<Integer> sums = new ArrayList<>();
+        int total = 0;
+        sums.add(0);
+        for (int value : values) {
+            total += value;
+            sums.add(total);
+        }
+        for (int i = 0; i < values.size(); i++) {
+            values.set(i, Math.abs(total - sums.get(i)) % 10);
+        }
     }
 
     private static String asString(List<Integer> values) {
