@@ -9,14 +9,32 @@ import java.util.stream.Collectors;
 
 public class Day21 {
     private static final String SPRINGCODE1 = "NOT A J\nNOT B T\nOR T J\nNOT C T\nOR T J\nAND D J\nWALK\n";
+    private static final String SPRINGCODE2 =
+            "NOT A J\n" +
+            "NOT B T\n" +
+            "OR T J\n" +
+            "NOT C T\n" +
+            "OR T J\n" +
+            "AND D J\n" +
+            "NOT E T\n" +
+            "NOT T T\n" +
+            "OR H T\n" +
+            "AND T J\n" +
+            "RUN\n";
 
     public static void main(String[] args) throws IOException {
         Program program = new Program("input21.txt");
         first(program);
+        second(program);
     }
 
     private static void first(Program program) {
         Computer computer = new Computer(program, new IOImpl(SPRINGCODE1));
+        computer.runProgram();
+    }
+
+    private static void second(Program program) {
+        Computer computer = new Computer(program, new IOImpl(SPRINGCODE2));
         computer.runProgram();
     }
 
