@@ -3,10 +3,7 @@ import lib.GraphUtil;
 import lib.InputUtil;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Day20 {
     public static void main(String[] args) throws IOException {
@@ -15,11 +12,23 @@ public class Day20 {
         var teleports = getTeleports(labels);
         CharMatrix.Position start = labels.get("AA").get(0);
         CharMatrix.Position end = labels.get("ZZ").get(0);
+        first(start, end, teleports);
+        second(start, end, charMatrix, teleports);
+    }
+
+    private static void first(CharMatrix.Position start, CharMatrix.Position end, Map<CharMatrix.Position, CharMatrix.Position> teleports) {
         int distance = GraphUtil.breadthFirstSearch(start, position -> getNeighbours(position, teleports), end::equals);
         System.out.println(distance);
     }
 
-    private static List<CharMatrix.Position> getNeighbours(CharMatrix.Position position, Map<CharMatrix.Position, CharMatrix.Position> teleports)  {
+    private static void second(CharMatrix.Position start, CharMatrix.Position end, CharMatrix charMatrix, Map<CharMatrix.Position, CharMatrix.Position> teleports) {
+        int distance = GraphUtil.breadthFirstSearch(new Node(0, start),
+                node -> getNeighbours(node, charMatrix.getWidth(), charMatrix.getHeight(), teleports),
+                node -> node.level == 0 && node.position.equals(end));
+        System.out.println(distance);
+    }
+
+    private static List<CharMatrix.Position> getNeighbours(CharMatrix.Position position, Map<CharMatrix.Position, CharMatrix.Position> teleports) {
         List<CharMatrix.Position> result = new ArrayList<>();
         for (CharMatrix.Position next : position.getNeighbours()) {
             if (next.get() == '.') {
@@ -28,6 +37,28 @@ public class Day20 {
         }
         if (teleports.containsKey(position)) {
             result.add(teleports.get(position));
+        }
+        return result;
+    }
+
+    private static List<Node> getNeighbours(Node node, int w, int h,Map<CharMatrix.Position, CharMatrix.Position> teleports) {
+        List<Node> result = new ArrayList<>();
+        for (CharMatrix.Position next : node.position.getNeighbours()) {
+            if (next.get() == '.') {
+                result.add(new Node(node.level, next));
+            }
+        }
+        if (teleports.containsKey(node.position)) {
+            int x = node.position.getX();
+            int y = node.position.getY();
+            boolean inner = (x > 2 && y > 2 && x < w - 3 && y < h - 3);
+            if (inner) {
+                if (node.level < 25) {
+                    result.add(new Node(node.level + 1, teleports.get(node.position)));
+                }
+            } else if (node.level > 0) {
+                result.add(new Node(node.level - 1, teleports.get(node.position)));
+            }
         }
         return result;
     }
@@ -70,6 +101,29 @@ public class Day20 {
                 label = "" + c2 + c1;
             }
             map.computeIfAbsent(label, key -> new ArrayList<>()).add(position);
+        }
+    }
+
+    static class Node {
+        final int level;
+        final CharMatrix.Position position;
+
+        public Node(int level, CharMatrix.Position position) {
+            this.level = level;
+            this.position = position;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Node node = (Node) o;
+            return level == node.level && Objects.equals(position, node.position);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(level, position);
         }
     }
 }
