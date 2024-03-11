@@ -4,16 +4,48 @@ import intcode.Program;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Day15 {
     public static void main(String[] args) throws IOException {
         Program program = new Program("input15.txt");
-        Computer computer = new Computer(program, new IOImpl());
+        Map<Position, Character> map = first(program);
+        second(map);
+    }
+
+    private static Map<Position, Character> first(Program program) {
+        IOImpl io = new IOImpl();
+        Computer computer = new Computer(program, io);
         try {
             computer.runProgram();
         } catch (NoSuchElementException e) {
             // No way to end the program in a nice way when we have the full map, so we just catch the exception
         }
+        return io.map;
+    }
+
+    private static void second(Map<Position, Character> map) {
+        Position start = map.entrySet().stream().filter(entry -> entry.getValue() == 'O').map(Map.Entry::getKey).findFirst().orElseThrow();
+        Set<Position> done = new HashSet<>(List.of(start));
+        Set<Position> current = new HashSet<>(List.of(start));
+        int distance = 0;
+        List<Position> deltas = IntStream.rangeClosed(1, 4).mapToObj(Position::direction).collect(Collectors.toList());
+        while (!current.isEmpty()) {
+            Set<Position> next = new HashSet<>();
+            for (Position position : current) {
+                for (Position delta : deltas) {
+                    Position nextPosition = position.add(delta);
+                    if (map.getOrDefault(nextPosition, ' ') == '.' && !done.contains(nextPosition)) {
+                        next.add(nextPosition);
+                        done.add(nextPosition);
+                    }
+                }
+            }
+            current = next;
+            distance++;
+        }
+        System.out.println(distance - 1);
     }
 
     static class Position {
