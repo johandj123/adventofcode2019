@@ -1,3 +1,5 @@
+import lib.GraphUtil;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,24 +25,8 @@ public class Day18 {
 
     private void first() {
         int allKeys = determineAllKeys();
-        Set<Node> explored = new HashSet<>();
-        Set<Node> current = new HashSet<>();
-        current.add(new Node(startx, starty));
-        int counter = 0;
-        while (!done(current, allKeys)) {
-            explored.addAll(current);
-            Set<Node> next = new HashSet<>();
-            for (Node node : current) {
-                for (Node nextNode : node.getNeighbours()) {
-                    if (!explored.contains(nextNode)) {
-                        next.add(nextNode);
-                    }
-                }
-            }
-            counter++;
-            current = next;
-        }
-        System.out.println("First: " + counter);
+        int distance = GraphUtil.breadthFirstSearch(new Node(startx, starty), Node::getNeighbours, node -> node.keys == allKeys);
+        System.out.println("First: " + distance);
     }
 
     private void second() {
@@ -50,32 +36,8 @@ public class Day18 {
         grid[starty][startx + 1] = '#';
         grid[starty - 1][startx] = '#';
         grid[starty + 1][startx] = '#';
-        Map<FourNode, Integer> distances = new HashMap<>();
-        SortedSet<FourNodeDistance> queue = new TreeSet<>();
-        FourNode root = new FourNode(startx, starty);
-        queue.add(new FourNodeDistance(0, root));
-        int totalDistance = Integer.MAX_VALUE;
-        while (!queue.isEmpty()) {
-            FourNodeDistance current = queue.first();
-            queue.remove(current);
-            if (current.fourNode.keys == allKeys) {
-                totalDistance = current.distance;
-                break;
-            }
-            for (Map.Entry<FourNode, Integer> entry : current.fourNode.getNeighbours().entrySet()) {
-                FourNode next = entry.getKey();
-                int distance = current.distance + entry.getValue();
-                Integer oldDistance = distances.get(next);
-                if (oldDistance == null || distance < oldDistance) {
-                    if (oldDistance != null) {
-                        queue.remove(new FourNodeDistance(oldDistance, next));
-                    }
-                    queue.add(new FourNodeDistance(distance, next));
-                    distances.put(next, distance);
-                }
-            }
-        }
-        System.out.println("Second: " + totalDistance);
+        int distance = GraphUtil.dijkstra(new FourNode(startx, starty), FourNode::getNeighbours, node -> node.keys == allKeys);
+        System.out.println("Second: " + distance);
     }
 
     private int determineAllKeys() {
@@ -90,10 +52,6 @@ public class Day18 {
             }
         }
         return result;
-    }
-
-    private boolean done(Set<Node> current, int allKeys) {
-        return current.stream().anyMatch(node -> node.keys == allKeys);
     }
 
     private void readInput(String name) throws IOException {
@@ -168,7 +126,7 @@ public class Day18 {
         }
     }
 
-    class FourNode {
+    class FourNode implements Comparable<FourNode> {
         int[] x;
         int[] y;
         int keys;
@@ -247,49 +205,20 @@ public class Day18 {
                 current = next;
             }
         }
-    }
-
-    class FourNodeDistance implements Comparable<FourNodeDistance> {
-        final int distance;
-        final FourNode fourNode;
-
-        public FourNodeDistance(int distance, FourNode fourNode) {
-            this.distance = distance;
-            this.fourNode = fourNode;
-        }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            FourNodeDistance that = (FourNodeDistance) o;
-            return distance == that.distance && fourNode.equals(that.fourNode);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(distance, fourNode);
-        }
-
-        @Override
-        public int compareTo(FourNodeDistance o) {
-            if (distance < o.distance) {
-                return -1;
-            }
-            if (distance > o.distance) {
-                return 1;
-            }
-            for (int i = 0; i < fourNode.x.length; i++) {
-                if (fourNode.x[i] < o.fourNode.x[i]) {
+        public int compareTo(FourNode o) {
+            for (int i = 0; i < x.length; i++) {
+                if (x[i] < o.x[i]) {
                     return -1;
                 }
-                if (fourNode.x[i] > o.fourNode.x[i]) {
+                if (x[i] > o.x[i]) {
                     return 1;
                 }
-                if (fourNode.y[i] < o.fourNode.y[i]) {
+                if (y[i] < o.y[i]) {
                     return -1;
                 }
-                if (fourNode.y[i] > o.fourNode.y[i]) {
+                if (y[i] > o.y[i]) {
                     return 1;
                 }
             }
