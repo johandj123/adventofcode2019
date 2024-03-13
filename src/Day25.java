@@ -169,7 +169,7 @@ public class Day25 {
                 List<Integer> next = new ArrayList<>(current);
                 int highBit = 1 << i;
                 for (int j = current.size() - 1; j >= 0; j--) {
-                    next.add(highBit | j);
+                    next.add(highBit | current.get(j));
                 }
                 current = next;
             }
